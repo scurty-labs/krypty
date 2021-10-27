@@ -94,7 +94,7 @@ pub fn string_generate(n int) string {
 	return str.join('')
 }
 
-// bytes_padding Ensure an array of bytes is of the correct size for block-based operations using dummy bytes
+/* bytes_padding Ensure an array of bytes is of the correct size for block-based operations using dummy bytes
 pub fn bytes_padding(padding_value byte, arr []byte, max int) []byte {
     r := arr.len % max
     mut new_arr := arr.clone()
@@ -102,6 +102,27 @@ pub fn bytes_padding(padding_value byte, arr []byte, max int) []byte {
 		new_arr << []byte{init:padding_value, len:max-r}
 	}
     return new_arr
+}
+*/
+
+pub fn pkcs7_padding(cipher_text []byte, block_size int) []byte {
+	padding := block_size - cipher_text.len % block_size
+	padding_text := []byte{init: byte(padding), len:padding}
+	mut padded_data := cipher_text.clone()
+	padded_data << padding_text
+	
+	// testing...
+	//println("Padding Byte: $padding")
+	
+	return padded_data
+}
+
+pub fn pksc7_unpadding(original_data []byte) []byte {
+	length := original_data.len
+	unpadding := int(original_data[length-1])
+	
+	//assert length < unpadding
+	return original_data[0..(length - unpadding)]
 }
 
 // bytes_to_str Converts an array of bytes to a standard string
@@ -111,11 +132,11 @@ pub fn bytes_to_str(arr []byte) string {
     return s.str()
 }
 
-// encrypt Convenient AES-256 helper function. It handles the key, iv, padding, and of course encryption of all blocks.
-pub fn encrypt(data []byte, iv []byte, key []byte, padding_value byte) []byte {
+// encrypt Convenient AES-256 helper function. It handles the key, iv, and of course encryption of all blocks.
+pub fn encrypt(data []byte, iv []byte, key []byte) []byte {
 
     mut cipher_text := data.clone()
-    cipher_text = bytes_padding(padding_value, cipher_text, aes.block_size)
+    cipher_text = pkcs7_padding(cipher_text, aes.block_size) //bytes_padding(padding_value, cipher_text, aes.block_size)
 
     mut key_value := key.clone()
     hexxy := md5.sum(key).hex()
@@ -144,6 +165,8 @@ pub fn decrypt(data []byte, key []byte) []byte {
     crypt := aes.new_cipher(key_value)
     mut mode := aes.new_cbc(crypt, iv)
     mode.decrypt_blocks(mut cipher_text, cipher_text)
+    
+    cipher_text = pksc7_unpadding(cipher_text)
 
     return cipher_text
 }
